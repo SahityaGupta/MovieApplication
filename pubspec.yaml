@@ -1,0 +1,33 @@
+name: movieapplication
+description: A Flutter Movies Database App.
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.18.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.0.0  # Networking
+  provider: ^6.0.0  # State management
+  hive: ^2.2.3  # Local DB
+  hive_flutter: ^1.1.0
+  connectivity_plus: ^6.1.5
+  share_plus: ^11.1.0  # Sharing
+#  uni_links: ^0.5.1  # Deep links
+  path_provider: ^2.0.0  # Hive init
+  cached_network_image: ^3.2.0  # Better image loading
+  shimmer: ^2.0.0  # Loading effects
+  win32: ^5.14.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  hive_generator: ^2.0.0
+  build_runner: ^2.0.0
+
+flutter:
+  uses-material-design: true
