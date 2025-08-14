@@ -1,27 +1,34 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 import 'package:movieapplication/models/movie.dart';
 import 'package:movieapplication/services/tmdb_service.dart';
+import 'dart:developer' as developer;
 
 class MovieRepository {
-  final TmdbService _apiService = TmdbService();
+  final TmdbService _apiService = TmdbService(Dio());
   final Box<Movie> _movieBox = Hive.box<Movie>('movies');
   final Box<String> _bookmarkBox = Hive.box<String>('bookmarks');
+  final String apiKey = "865695e017b5153ef4ca263248c26d92";
 
   Future<bool> isOnline() async {
-    var connectivityResult = await Connectivity().checkConnectivity();
+    final connectivityResult = await Connectivity().checkConnectivity();
     return connectivityResult != ConnectivityResult.none;
   }
 
   Future<List<Movie>> getTrendingMovies() async {
     if (await isOnline()) {
       try {
-        final movies = await _apiService.getTrendingMovies();
+        final response = await _apiService.getTrendingMovies(apiKey);
+        final movies = response.results;
+
         for (var movie in movies) {
           _movieBox.put(movie.id, movie);
         }
         return movies;
-      } catch (e) {}
+      } catch (e, s) {
+        developer.log('Error fetching trending movies', error: e, stackTrace: s);
+      }
     }
     return _movieBox.values.toList();
   }
@@ -29,12 +36,16 @@ class MovieRepository {
   Future<List<Movie>> getNowPlayingMovies() async {
     if (await isOnline()) {
       try {
-        final movies = await _apiService.getNowPlayingMovies();
+        final response = await _apiService.getNowPlayingMovies(apiKey);
+        final movies = response.results;
+
         for (var movie in movies) {
           _movieBox.put(movie.id, movie);
         }
         return movies;
-      } catch (e) {}
+      } catch (e, s) {
+        developer.log('Error fetching now playing movies', error: e, stackTrace: s);
+      }
     }
     return _movieBox.values.toList();
   }
@@ -42,13 +53,19 @@ class MovieRepository {
   Future<List<Movie>> searchMovies(String query) async {
     if (await isOnline()) {
       try {
-        final movies = await _apiService.searchMovies(query);
+        final response = await _apiService.searchMovies(apiKey, query);
+        final movies = response.results;
+
         for (var movie in movies) {
           _movieBox.put(movie.id, movie);
         }
         return movies;
-      } catch (e) {}
+      } catch (e, s) {
+        developer.log('Error searching movies', error: e, stackTrace: s);
+      }
     }
+
+    // Offline search
     return _movieBox.values
         .where((m) => m.title.toLowerCase().contains(query.toLowerCase()))
         .toList();
@@ -57,13 +74,14 @@ class MovieRepository {
   Future<Movie> getMovieDetails(int id) async {
     if (await isOnline()) {
       try {
-        final movie = await _apiService.getMovieDetails(id);
+        final movie = await _apiService.getMovieDetails(id, apiKey);
         _movieBox.put(id, movie);
         return movie;
-      } catch (e) {}
+      } catch (e, s) {
+        developer.log('Error fetching movie details', error: e, stackTrace: s);
+      }
     }
-    return _movieBox.get(id) ??
-        Movie(id: id, title: 'Unknown', overview: '');
+    return _movieBox.get(id) ?? Movie(id: id, title: 'Unknown', overview: '');
   }
 
   Future<void> toggleBookmark(int movieId) async {
@@ -79,7 +97,7 @@ class MovieRepository {
   }
 
   List<Movie> getBookmarkedMovies() {
-    final ids = _bookmarkBox.values.map((idStr) => int.parse(idStr)).toList();
+    final ids = _bookmarkBox.values.map(int.parse).toList();
     return ids
         .map((id) => _movieBox.get(id))
         .whereType<Movie>()

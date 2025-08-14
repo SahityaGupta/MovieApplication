@@ -1,27 +1,36 @@
 import 'package:dio/dio.dart';
+import 'package:retrofit/retrofit.dart';
 import 'package:movieapplication/models/movie.dart';
 
-class TmdbService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'https://api.themoviedb.org/3'));
-  final String apiKey = '865695e017b5153ef4ca263248c26d92';  // Replace with your TMDB API key
+part 'tmdb_service.g.dart';
 
-  Future<List<Movie>> getTrendingMovies() async {
-    final response = await _dio.get('/trending/movie/week', queryParameters: {'api_key': apiKey});
-    return (response.data['results'] as List).map((json) => Movie.fromJson(json)).toList();
-  }
+@RestApi(baseUrl: "https://api.themoviedb.org/3")
+abstract class TmdbService {
+  factory TmdbService(Dio dio, {String baseUrl}) = _TmdbService;
 
-  Future<List<Movie>> getNowPlayingMovies() async {
-    final response = await _dio.get('/movie/now_playing', queryParameters: {'api_key': apiKey});
-    return (response.data['results'] as List).map((json) => Movie.fromJson(json)).toList();
-  }
+  @GET("/trending/movie/week")
+  Future<MoviesResponse> getTrendingMovies(@Query("api_key") String apiKey);
 
-  Future<List<Movie>> searchMovies(String query) async {
-    final response = await _dio.get('/search/movie', queryParameters: {'api_key': apiKey, 'query': query});
-    return (response.data['results'] as List).map((json) => Movie.fromJson(json)).toList();
-  }
+  @GET("/movie/now_playing")
+  Future<MoviesResponse> getNowPlayingMovies(@Query("api_key") String apiKey);
 
-  Future<Movie> getMovieDetails(int id) async {
-    final response = await _dio.get('/movie/$id', queryParameters: {'api_key': apiKey});
-    return Movie.fromJson(response.data);
+  @GET("/search/movie")
+  Future<MoviesResponse> searchMovies(
+      @Query("api_key") String apiKey, @Query("query") String query);
+
+  @GET("/movie/{id}")
+  Future<Movie> getMovieDetails(@Path("id") int id, @Query("api_key") String apiKey);
+}
+
+/// Wraps the TMDB response which contains a list of movies
+class MoviesResponse {
+  final List<Movie> results;
+
+  MoviesResponse({required this.results});
+
+  factory MoviesResponse.fromJson(Map<String, dynamic> json) {
+    final list = json['results'] as List<dynamic>? ?? [];
+    final movies = list.map((e) => Movie.fromJson(e as Map<String, dynamic>)).toList();
+    return MoviesResponse(results: movies);
   }
 }
